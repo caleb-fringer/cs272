@@ -2,26 +2,6 @@ from collections import defaultdict
 import random
 from typing import List, Tuple
 
-
-class StateActionSpace:
-    def __init__(self):
-        self.environment = {}
-
-    def update(self, state, action):
-        if state not in self.environment:
-            self.environment[state] = {action: 0 for action in range(4)}
-
-        self.environment[state][action] += 1
-
-    def __repr__(self):
-        return str(self.environment)
-
-    def least_explored_action(self, state):
-        return self.environment[state]
-
-'''
-every 5 minutes Im losing internet
-'''
 class StudentAgent:
     def __init__(self):
         """
