@@ -9,7 +9,7 @@ class StudentAgent:
         Initialize your internal state here.
         """
         # Initialize (state,action) values to a random value in [-1,1] as needed
-        self._q = defaultdict(lambda: {action: 100 for action in range(4)})
+        self._q = defaultdict(lambda: {action: 0 for action in range(4)})
         # Tracks (state,action) returns from the history
         self._returns = defaultdict(list)
         # Epsilon-greedy for choosing random (non-optimal action)
@@ -17,7 +17,7 @@ class StudentAgent:
         # For tracking changes to history
         self._history = []
         # Used to signal when to start annealling epsilon
-        self._terminal_state_found = False
+        self._goal_count = 0
         random.seed(seed)
 
     def choose_action(self, state):
@@ -54,10 +54,14 @@ class StudentAgent:
         # Total return
         episode_return = sum(step[-1] for step in episode)
 
-        if episode_return > -400:
-            self._terminal_state_found = True
         # Cumulative rewards from time 0 to t
         G = 0
+
+        if episode_return > -400:
+            # Give a large positive reward for reaching the goal state.
+            G += 500
+            self._goal_count += 1
+
         for x, y, a, next_x, next_y, r in episode:
             s = (x,y)
             if (s, a) not in first_visits:
@@ -68,9 +72,9 @@ class StudentAgent:
             # Increment cumulative reward
             G += r
 
-        # Anneal epsilon after we have reached the terminal state
-        if self._terminal_state_found:
-            self._epsilon *= 0.98
+        # Anneal epsilon after we have reached the terminal state 5 times
+        if self._goal_count >= 5:
+            self._epsilon *= 0.99
 
 
     def get_action(self, x: int, y: int, history: List[Tuple[int, int, int, int, int, float]]) -> int:
