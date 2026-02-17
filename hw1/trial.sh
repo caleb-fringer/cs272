@@ -7,4 +7,4 @@ if [ ! -d "$outdir" ]; then
 fi
 
 outfile="$outdir/run_$(date +"%Y-%m-%d_%H-%M-%S").log"
-python3 -u runner.py | tee $outfile
+python3 -u myrunner.py | tee $outfile
