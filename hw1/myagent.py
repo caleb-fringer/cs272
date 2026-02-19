@@ -1,8 +1,32 @@
+import os
+import pickle
 from datetime import datetime
 from numpy import average
 from collections import defaultdict
 import random
 from typing import List, Tuple
+import logging
+
+class EpisodeFilter(logging.Filter):
+    '''
+    Creates a filter that can inject agent state (episode number) into logs.
+    '''
+    def __init__(self, agent):
+        super().__init__()
+        self.agent = agent
+
+    def filter(self, record):
+        # Dynamically grab the episode from the agent's private member
+        record.episode = self.agent._episode
+        return True
+
+# Setup Agent Trace
+agent_trace = logging.getLogger("agent_trace")
+agent_trace.setLevel(logging.DEBUG)
+
+# Setup History Log
+history_logger = logging.getLogger("history")
+history_logger.setLevel(logging.INFO)
 
 class StudentAgent:
     def __init__(self, epsilon=1, seed=1337):
@@ -17,13 +41,33 @@ class StudentAgent:
         self._epsilon = epsilon
         # For tracking changes to history
         self._history = []
-        # Create history file
-        self._history_file = f"history_{datetime.today().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
-        with open(self._history_file, "x") as f:
-            f.write(f"Beginning run w/ parameters epsilon={self._epsilon}, seed={seed}\n")
+        # Keep track of episode count
+        self._episode = 0
         # Used to signal when to start annealling epsilon
         self._goal_count = 0
         random.seed(seed)
+        # Configure logging to have access to internal state
+        self._setup_logging()
+
+    def _setup_logging(self):
+        '''
+        Configures the loggers to use this instance's state.
+        '''
+        # Read the session directory from the environment, default to current dir
+        session_dir = os.environ.get("SESSION_DIR", ".")
+        
+        agent_trace.handlers = []
+        epi_filter = EpisodeFilter(self)
+        agent_trace.addFilter(epi_filter)
+
+        # Write DIRECTLY to the session directory
+        agent_fh = logging.FileHandler(os.path.join(session_dir, "decisions.log"))
+        agent_fh.setFormatter(logging.Formatter("Episode %(episode)d | %(message)s"))
+        agent_trace.addHandler(agent_fh)
+
+        history_fh = logging.FileHandler(os.path.join(session_dir, "history.log"))
+        history_fh.setFormatter(logging.Formatter("%(message)s"))
+        history_logger.addHandler(history_fh)
 
     def choose_action(self, state):
         '''
@@ -45,17 +89,23 @@ class StudentAgent:
         should_explore = random.binomialvariate(1,self._epsilon)
 
         if should_explore:
-            return random.choice(non_greedy_actions)
+            action = random.choice(non_greedy_actions)
+            agent_trace.debug(f"Exploring: Selected action {action} randomly.")
         else:
-            return random.choice(greedy_actions)
+            action = random.choice(greedy_actions)
+            agent_trace.debug(f"Exploiting: Selected greedy action {action} randomly.")
+        return action
 
     def update_history(self, episode):
         '''
         Add the most recent episode's data to the history.
         '''
+        self._episode += 1
+
+        # Log history
         self._history.append(episode)
-        with open(self._history_file, "a") as f:
-            f.write(f"{episode}\n")
+        history_logger.info(episode)
+
         # Track first visits so each q value is updated at most once
         first_visits = set()
         # Total return
@@ -70,6 +120,7 @@ class StudentAgent:
             # states from runs that simply run out of moves.
             G += 500
             self._goal_count += 1
+            agent_trace.info(f"Goal reached! Total goals: {self._goal_count}")
 
         for x, y, a, next_x, next_y, r in episode:
             s = (x,y)
@@ -90,7 +141,17 @@ class StudentAgent:
         if self._goal_count >= 5:
             # Need to maintain a non-zero epsilon to guarantee convergence
             self._epsilon = max(self._epsilon*0.99, 0.01)
+            agent_trace.info(f"Annealing: New epsilon is {self._epsilon:.4f}")
 
+    def dump_state(self, filepath):
+        '''
+        Dumps the q-value table for future learning.
+        '''
+        if self._q is None:
+            return
+
+        with open(filepath, 'wb') as f:
+            pickle.dump(self._q, f)
 
     def get_action(self, x: int, y: int, history: List[Tuple[int, int, int, int, int, float]]) -> int:
         """
@@ -105,7 +166,6 @@ class StudentAgent:
             int: The action to take (0, 1, 2, or 3).
         """
         if len(history) > len(self._history):
-            print("Updating history")
             self.update_history(history[-1])
 
         action = self.choose_action((x,y))
