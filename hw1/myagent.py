@@ -47,7 +47,7 @@ class StudentAgent:
         if should_explore:
             return random.choice(non_greedy_actions)
         else:
-            return random.choice(non_greedy_actions)
+            return random.choice(greedy_actions)
 
     def update_history(self, episode):
         '''
