@@ -33,4 +33,8 @@ max(returns)
 sma = simple_moving_avg(returns)
 sma
 plt.plot(simple_moving_avg(returns))
+plt.title("Avg. Return by Episode")
+plt.xlabel("Episodes")
+plt.ylabel("Avg. Return (past 20 episodes)")
 plt.show()
+
