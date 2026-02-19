@@ -29,12 +29,12 @@ history_logger = logging.getLogger("history")
 history_logger.setLevel(logging.INFO)
 
 class StudentAgent:
-    def __init__(self, epsilon=1, seed=1337):
+    def __init__(self, epsilon=1, seed=1337, decay_base=0.99, decay_rate=1/16):
         """
         Initialize your internal state here.
         """
         # Initialize (state,action) values to 0
-        self._q = defaultdict(lambda: {action: 0 for action in range(4)})
+        self._q = defaultdict(self._init_q)
         # Tracks (state,action) returns from the history
         self._returns = defaultdict(list)
         # Epsilon-greedy for choosing random (non-optimal action)
@@ -48,6 +48,15 @@ class StudentAgent:
         random.seed(seed)
         # Configure logging to have access to internal state
         self._setup_logging()
+        # Epsilon decay params
+        self._decay_factor = decay_base ** decay_rate
+
+    def _init_q(self):
+        '''
+        Creates an initial q-value dict w/ a value of 0 for every action.
+        Used by defaultdict, but must be a named function to allow pickling.
+        '''
+        return {action: 0 for action in range(4)}
 
     def _setup_logging(self):
         '''
@@ -138,9 +147,9 @@ class StudentAgent:
             G += r
 
         # Anneal epsilon after we have reached the terminal state 5 times
-        if self._goal_count >= 5:
+        if self._goal_count >= 10:
             # Need to maintain a non-zero epsilon to guarantee convergence
-            self._epsilon = max(self._epsilon*0.99, 0.01)
+            self._epsilon = max(self._epsilon*self._decay_factor, 0.01)
             agent_trace.info(f"Annealing: New epsilon is {self._epsilon:.4f}")
 
     def dump_state(self, filepath):
