@@ -1,14 +1,15 @@
+from datetime import datetime
 from numpy import average
 from collections import defaultdict
 import random
 from typing import List, Tuple
 
 class StudentAgent:
-    def __init__(self, epsilon=0.5, seed=1337):
+    def __init__(self, epsilon=1, seed=1337):
         """
         Initialize your internal state here.
         """
-        # Initialize (state,action) values to a random value in [-1,1] as needed
+        # Initialize (state,action) values to 0
         self._q = defaultdict(lambda: {action: 0 for action in range(4)})
         # Tracks (state,action) returns from the history
         self._returns = defaultdict(list)
@@ -16,6 +17,10 @@ class StudentAgent:
         self._epsilon = epsilon
         # For tracking changes to history
         self._history = []
+        # Create history file
+        self._history_file = f"history_{datetime.today().strftime("%Y-%m-%d_%H-%M-%S")}.txt"
+        with open(self._history_file, "x") as f:
+            f.write(f"Beginning run w/ parameters epsilon={self._epsilon}, seed={seed}\n")
         # Used to signal when to start annealling epsilon
         self._goal_count = 0
         random.seed(seed)
@@ -49,6 +54,8 @@ class StudentAgent:
         Add the most recent episode's data to the history.
         '''
         self._history.append(episode)
+        with open(self._history_file, "a") as f:
+            f.write(f"{episode}\n")
         # Track first visits so each q value is updated at most once
         first_visits = set()
         # Total return
@@ -59,6 +66,8 @@ class StudentAgent:
 
         if episode_return > -400:
             # Give a large positive reward for reaching the goal state.
+            # This should help to distinguish runs that reach terminal
+            # states from runs that simply run out of moves.
             G += 500
             self._goal_count += 1
 
@@ -67,14 +76,20 @@ class StudentAgent:
             if (s, a) not in first_visits:
                 first_visits.add((s,a))
                 # Calculate return from this step onwards
-                self._returns[(s,a)].append(episode_return - G)
-                self._q[s][a] = average(self._returns[(s,a)])
-            # Increment cumulative reward
+                sampled_return = episode_return - G
+                # Append to history
+                self._returns[(s,a)].append(sampled_return)
+                # Efficiently compute the incremental average of returns
+                prev_q = self._q[s][a]
+                k = len(self._returns[(s,a)])
+                self._q[s][a] = prev_q + (1/k)*(sampled_return - prev_q)
+            # Increment cumulative reward for the next step.
             G += r
 
         # Anneal epsilon after we have reached the terminal state 5 times
         if self._goal_count >= 5:
-            self._epsilon *= 0.99
+            # Need to maintain a non-zero epsilon to guarantee convergence
+            self._epsilon = max(self._epsilon*0.99, 0.01)
 
 
     def get_action(self, x: int, y: int, history: List[Tuple[int, int, int, int, int, float]]) -> int:
@@ -96,15 +111,3 @@ class StudentAgent:
         action = self.choose_action((x,y))
 
         return action  # do not change
-
-q = defaultdict(lambda: {action: 2*random.random()-1 for action in range(4)})
-actions = q[(0,1)]
-actions
-optimal_q = max(actions.items(), key=lambda item: item[1])[0]
-optimal_q
-
-
-greedy_actions = [action for action in actions if actions[action] >= optimal_q] # >= optimal_q in case of floating point jankiness
-non_greedy_actions = [action for action in actions if action not in greedy_actions]
-greedy_actions
-non_greedy_actions 
