@@ -29,11 +29,11 @@ history_logger = logging.getLogger("history")
 history_logger.setLevel(logging.INFO)
 
 class StudentAgent:
-    def __init__(self, epsilon=1, seed=1337, decay_base=0.99, decay_rate=1/16):
+    def __init__(self, epsilon=1, seed=1337, decay_base=0.995, decay_rate=1/3, learning_rate=0.1):
         """
         Initialize your internal state here.
         """
-        # Initialize (state,action) values to 0
+        # Initialize (state,action) values
         self._q = defaultdict(self._init_q)
         # Tracks (state,action) returns from the history
         self._returns = defaultdict(list)
@@ -50,13 +50,14 @@ class StudentAgent:
         self._setup_logging()
         # Epsilon decay params
         self._decay_factor = decay_base ** decay_rate
+        self._learning_rate = learning_rate
 
-    def _init_q(self):
+    def _init_q(self, initial_value=-400):
         '''
-        Creates an initial q-value dict w/ a value of 0 for every action.
+        Creates an initial q-value dict w/ a default value for every action.
         Used by defaultdict, but must be a named function to allow pickling.
         '''
-        return {action: 0 for action in range(4)}
+        return {action: initial_value for action in range(4)}
 
     def _setup_logging(self):
         '''
@@ -95,7 +96,7 @@ class StudentAgent:
         greedy_actions = [action for action in actions if actions[action] >= optimal_q] # >= optimal_q in case of floating point jankiness
         non_greedy_actions = [action for action in actions]
         # Bernoulli trial to decide if we should explore w/ probability epsilon
-        should_explore = random.binomialvariate(1,self._epsilon)
+        should_explore = random.random() < self._epsilon
 
         if should_explore:
             action = random.choice(non_greedy_actions)
