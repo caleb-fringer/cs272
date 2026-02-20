@@ -124,10 +124,6 @@ class StudentAgent:
         G = 0
 
         if episode_return > -400:
-            # Give a large positive reward for reaching the goal state.
-            # This should help to distinguish runs that reach terminal
-            # states from runs that simply run out of moves.
-            G += 500
             self._goal_count += 1
             agent_trace.info(f"Goal reached! Total goals: {self._goal_count}")
 
@@ -141,8 +137,7 @@ class StudentAgent:
                 self._returns[(s,a)].append(sampled_return)
                 # Efficiently compute the incremental average of returns
                 prev_q = self._q[s][a]
-                k = len(self._returns[(s,a)])
-                self._q[s][a] = prev_q + (1/k)*(sampled_return - prev_q)
+                self._q[s][a] = prev_q + self._learning_rate*(sampled_return - prev_q)
             # Increment cumulative reward for the next step.
             G += r
 
