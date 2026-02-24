@@ -62,7 +62,7 @@ if __name__ == "__main__":
     num_epi = 20_000
     total_rewards = [-400] 
     print("Training started. Press Ctrl+C to manage execution.")
-    while np.average(total_rewards[-20:]) < -50 and len(total_rewards) < num_epi:
+    while len(total_rewards) - 1 < num_epi:
         _, tr = client.run_episode(agent)
         total_rewards.append(tr)
 

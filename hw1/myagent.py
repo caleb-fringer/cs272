@@ -142,8 +142,8 @@ class StudentAgent:
             # Increment cumulative reward for the next step.
             G += r
 
-        # Anneal epsilon after we have reached the terminal state 5 times
-        if self._goal_count >= 10:
+        # Anneal epsilon after we have reached the terminal state
+        if self._goal_count >= 1:
             # Need to maintain a non-zero epsilon to guarantee convergence
             self._epsilon = max(self._epsilon*self._decay_factor, 0.01)
             agent_trace.info(f"Annealing: New epsilon is {self._epsilon:.4f}")
