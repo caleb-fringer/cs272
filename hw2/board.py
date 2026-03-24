@@ -3,12 +3,12 @@ import numpy as np
 class Board():
     def __init__(self):
         self._board = np.array([[ 0,-1, 0,-1, 0,-1],
-                               [-1, 0,-1, 0,-1, 0],
-                               [ 0, 0, 0, 0, 0, 0],
-                               [ 0, 0, 0, 0, 0, 0],
-                               [ 0, 1, 0, 1, 0, 1],
-                               [ 1, 0, 1, 0, 1, 0]],
-                              dtype=np.int8)
+                                [-1, 0,-1, 0,-1, 0],
+                                [ 0, 0, 0, 0, 0, 0],
+                                [ 0, 0, 0, 0, 0, 0],
+                                [ 0, 1, 0, 1, 0, 1],
+                                [ 1, 0, 1, 0, 1, 0]],
+                               dtype=np.int8)
         self._is_flipped = False
 
     def __getitem__(self, position):
