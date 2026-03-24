@@ -18,7 +18,7 @@ class Board():
         '''
         row, col = position
         board = self._board
-        if row < 0 or col < 0 or row <= len(board) or col <= len(board[0]):
+        if not (0 <= row < len(board)) or not (0 <= col < len(board[0])):
             raise IndexError(f"Position {position} is out of bounds")
         return board[position]
 
@@ -73,7 +73,8 @@ class Board():
         '''
         J = np.identity(6)[:, ::-1]
         self._is_flipped = True
-        return -1 * J @ self._board @ J
+        self._board = -1 * J @ self._board @ J
+        return self._board
 
     def render(self):
         '''
@@ -101,11 +102,11 @@ class Board():
         overwritten without regard to the legality of the move.
         '''
         board = self._board
-        if row < 0 or row >= len(board) or col < 0 or col >= len(board[0]):
+        if not (0 <= row < len(board)) or not (0 <= col < len(board[0])):
             raise IndexError(f"Source position ({row,col}) out of bounds")
         
         dest_row, dest_col = row + dir_row, col + dir_col
-        if dest_row < 0 or dest_row >= len(board) or dest_col < 0 or dest_col >= len(board[0]):
+        if not (0 <= dest_row < len(board)) or not (0 <= dest_col < len(board[0])):
             raise IndexError(f"Destination position ({dest_row,dest_col}) out of bounds")
 
         board[(dest_row, dest_col)] = board[(row, col)]
