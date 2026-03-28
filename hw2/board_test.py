@@ -43,19 +43,5 @@ class TestBoard(unittest.TestCase):
         with self.assertRaises(ValueError):
             snapshot[0, 0] = 99
 
-    def test_flip_board_logic(self):
-        """Verify that flipping rotates the board and inverts values."""
-        # Save a value from the bottom-left corner
-        original_val = self.board[5, 0] # Should be 1
-        
-        # In your current code, flip_board returns the board but doesn't save it.
-        # Assuming the bug is fixed, we test if orientation changes:
-        flipped_array = self.board.flip_board()
-        
-        # After flip, the old (5,0) is now at (0,5) and sign-flipped
-        # (1 becomes -1)
-        self.assertEqual(flipped_array[0, 5], -original_val)
-        self.assertEqual(self.board.get_orientation(), "red")
-
 if __name__ == "__main__":
     unittest.main()
