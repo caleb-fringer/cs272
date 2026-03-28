@@ -51,11 +51,9 @@ def signal_handler(sig, frame):
         sys.exit(5)
 
 if __name__ == "__main__":
-    from runner import GameClient
-    from myagent import StudentAgent
+    from td_agent import Agent
     
-    client = GameClient()
-    agent = StudentAgent()
+    agent = Agent()
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -63,7 +61,7 @@ if __name__ == "__main__":
     total_rewards = [-400] 
     print("Training started. Press Ctrl+C to manage execution.")
     while len(total_rewards) - 1 < num_epi:
-        _, tr = client.run_episode(agent)
+        _, tr = agent.run_episode()
         total_rewards.append(tr)
 
     print("\n[System] Training loop completed organically.")
