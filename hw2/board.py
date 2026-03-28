@@ -9,7 +9,6 @@ class Board():
                                 [ 0, 1, 0, 1, 0, 1],
                                 [ 1, 0, 1, 0, 1, 0]],
                                dtype=np.int8)
-        self._is_flipped = False
 
     def __getitem__(self, position):
         '''
@@ -31,27 +30,9 @@ class Board():
         
     def __equals__(self, other):
         '''
-        Returns whether the two boards are elementwise equal in the standard
-        orientation. Performs flips to bring boards into the same orientation
-        before comparison, restoring the orientation afterwars if necessary
+        Returns whether the two boards are elementwise equal.
         '''
-        should_flip_self = self._is_flipped
-        should_flip_other = other.get_orientation() == "red"
-
-        if should_flip_self:
-            self.flip_board()
-        if should_flip_other:
-            other.flip_board()
-
-        is_equal = np.equal(self._board, other.get_board())
-
-        # Restore original orientations
-        if should_flip_self:
-            self.flip_board()
-        if should_flip_other:
-            other.flip_board()
-
-        return is_equal
+        return np.equal(self._board, other.get_board())
 
     def get_board(self):
         '''
@@ -61,40 +42,18 @@ class Board():
         result.flags.writeable = False
         return result
 
-    def get_orientation(self):
-        return "red" if self._is_flipped else "black"
-
-    def flip_board(self):
-        '''
-        Given a board, rotate it 180 degrees and multiply values by -1.
-        This ensures that the current agent always sees the board with
-        1 representing their pieces, and forward being in the decreasing
-        row dimension.
-        '''
-        J = np.identity(6)[:, ::-1]
-        self._is_flipped = True
-        self._board = -1 * J @ self._board @ J
-        return self._board
-
+    
     def render(self):
         '''
         Renders the board, always using black's perspective as the orientation.
         '''
         print("-"*13)
-        should_flip = self._is_flipped
-        if should_flip:
-            self.flip_board()
-
-        for row in self._board:  # ty:ignore[not-iterable]
+        
+        for row in self._board:
             squares = map(str, row)
             line = "|".join(squares).replace("-1", "R").replace("1", "B").replace("0", " ")
             print(f"|{line}|")
             print("-"*13)
-
-        # Restore the original orientation
-        if should_flip:
-            self.flip_board()
-
     def move(self, row, col, dir_row, dir_col):
         '''
         Move the piece at (row, col) in the direction of (dir_row, dir_col), performing bounds
