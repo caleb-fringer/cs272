@@ -17,7 +17,7 @@ class Board():
         '''
         row, col = position
         board = self._board
-        if not (0 <= row < len(board)) or not (0 <= col < len(board[0])):
+        if not (0 <= row < board.shape[0]) or not (0 <= col < board.shape[1]):
             raise IndexError(f"Position {position} is out of bounds")
         return board[position]
 
@@ -61,7 +61,7 @@ class Board():
         overwritten without regard to the legality of the move.
         '''
         board = self._board
-        if not (0 <= row < len(board)) or not (0 <= col < len(board[0])):
+        if not (0 <= row < board.shape[0]) or not (0 <= col < board.shape[1]):
             raise IndexError(f"Source position ({row,col}) out of bounds")
         
         dest_row, dest_col = row + dir_row, col + dir_col
