@@ -1,0 +1,22 @@
+\textbf{Policy Iteration (using iterative policy evaluation) for estimating $\pi \approx \pi_*$}
+\begin{enumerate}
+	\item \textbf{Initialization}\\
+	      $V(s) \in \mathbb{R}$ and $\pi(s) \in \mathcal{A}(s)$ arbitrarily for all $s \in \mathcal{S}$; $V(\text{terminal}) \doteq 0$
+
+	\item \textbf{Policy Evaluation}\\
+	      Loop:\\
+	      \hspace*{1em} $\Delta \leftarrow 0$\\
+	      \hspace*{1em} Loop for each $s \in \mathcal{S}$:\\
+	      \hspace*{2em} $v \leftarrow V(s)$\\
+	      \hspace*{2em} $V(s) \leftarrow \sum_{s', r} p(s', r | s, \pi(s)) [r + \gamma V(s')]$\\
+	      \hspace*{2em} $\Delta \leftarrow \max(\Delta, |v - V(s)|)$\\
+	      until $\Delta < \theta$ (a small positive number determining the accuracy of estimation)
+
+	\item \textbf{Policy Improvement}\\
+	      \textit{policy-stable} $\leftarrow$ \textit{true}\\
+	      For each $s \in \mathcal{S}$:\\
+	      \hspace*{1em} \textit{old-action} $\leftarrow \pi(s)$\\
+	      \hspace*{1em} $\pi(s) \leftarrow \arg\max_a \sum_{s', r} p(s', r | s, a) [r + \gamma V(s')]$\\
+	      \hspace*{1em} If \textit{old-action} $\neq \pi(s)$, then \textit{policy-stable} $\leftarrow$ \textit{false}\\
+	      If \textit{policy-stable}, then stop and return $V \approx v_*$ and $\pi \approx \pi_*$; else go to 2
+\end{enumerate}

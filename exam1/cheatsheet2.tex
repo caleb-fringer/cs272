@@ -1,0 +1,315 @@
+\documentclass[10pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage[margin=0.4in]{geometry}
+\usepackage{multicol}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{float} % Required to use [H] with algorithms in multicol
+
+% Compact section titles
+\titlespacing*{\section}{0pt}{1ex plus .2ex minus .2ex}{0.5ex plus .1ex}
+\setlength{\parindent}{0pt}
+\setlength{\columnsep}{0.3in}
+\DeclareMathOperator*{\argmax}{argmax}
+
+\begin{document}
+\begin{multicols*}{2}
+
+	\section*{Key Concepts}
+	\textbf{Greedy $\ne$ $\epsilon$-Greedy:} MC-Control uses soft policy update, not greedy!\\
+	\textbf{Maximization Bias:} Q-learning uses a max operation, which biases its value upwards.\\
+	\textbf{Bootstrapping:} DP and ALL TD bootstrap. MC does not.\\
+	\textbf{Sampling:} DP is the only one that doesn't sample.\\
+	\textbf{Sarsa vs Q-learning:} Q-learning is optimistic, Sarsa is "safer". \\
+	\textbf{Importance Sampling:} Corrects for the distribution mismatch between $b(s)$ and $\pi(s)$, converts $v_b(s) \rightarrow v_\pi(s)$. \\
+	\textbf{Safety:} Learning rule is safe if it at least a maxmin (security) value. \\
+	\textbf{Rational:} Learning rule is rational if opponent settles on stationary strategy $\implies$ agent settles on best response. \\
+	\textbf{No-regret:} Outperforms repeatedly playing a single action. \\
+	\textbf{Markov Property:} Future states are influenced only by the present. Past can be disregarded.
+
+	\section*{Equations \& Updates}
+	\textbf{Value Functions:} \\
+	$v_\pi(s) = \mathbb{E_\pi}[G_t|S_t=s] = \mathbb{E_\pi}[\sum_{k=0}^{\infty}{\gamma^k R_{t+k+1}}|S_t=s]$
+	\begin{align*}
+		q_\pi(s,a) & = \mathbb{E_\pi}[G_t|S_t=s,A_t=a]                                     \\
+		           & = \mathbb{E_\pi}[\sum_{k=0}^{\infty}{\gamma^k R_{t+k+1}}|S_t=s,A_t=a]
+	\end{align*}
+	\textbf{Bellman Expectation Equations:} \\
+	$v_\pi(s) = \sum_a{\pi(a|s)}\sum_{s',r}{p(s',r|s,a)[r + \gamma v_\pi(s')]}$\\[1ex]
+	$q_\pi(s,a) = \sum_{s',r}{p(s',r|s,a)[r + \gamma \sum_{a'}{\pi(s',a')q(s',a')}]}$\\[1ex]
+	\textbf{Bellman Optimality Equations:} \\
+	$v_*(s) = \max_a q_{\pi_*}(s,a) = \max_a \sum_{s',r}{p(s',r|s,a)[r+\gamma v_*(s')]}$ \\[1ex]
+	$q_*(s,a) = \sum_{s',r}{p(s',r|s,a)[r+ \gamma \max_{a'}q_*(s',a')]}$ \\[1ex]
+	\textbf{Batch Update Target Values:} \\
+	MC: $\mathbb{E}_\pi[G_t|S_t]$ \quad TD(0): $R_{t+1} + \gamma V(S_{t+1})$\\[1ex]
+	\textbf{DP Update:}\\
+	$V(S_t) \leftarrow \mathbb{E}_{\pi}[R_{t+1} + \gamma V(S_{t+1})]$\\[1ex]
+	\textbf{MC Prediction Update:}\\
+	$V(S_t) \leftarrow V(S_t) + \alpha[G_t  - V(S_t)]$\\[1ex]
+	\textbf{MC Control Update:}\\
+	$Q(S_t,A_t) \leftarrow Q(S_t,A_t) + \alpha[G_t  - Q(S_t,A_t)]$\\[1ex]
+	\textbf{TD(0) Update:}\\
+	$V(S) \leftarrow V(S) + \alpha[R + \gamma V(S') - V(S)]$\\[1ex]
+	\textbf{SARSA Update:}\\
+	$Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma Q(S',A') - Q(S,A)]$\\[1ex]
+	\textbf{Q-Learning Update:}\\
+	$Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma \max_a Q(S',a) - Q(S,A)]$\\[1ex]
+	\textbf{Double Q-Learning Update:}\\
+	$Q_1(S,A) \leftarrow Q_1(S,A) + \alpha[R + \gamma Q_2(S', \argmax_a Q_2(S',a)) - Q_2(S,A)]$\\[1ex]
+	\textbf{UCB Action Selection:}\\
+	$a_t = \argmax_{a \in \mathcal{A}}\left(Q(a) + c\sqrt{\frac{\ln{t}}{N_t(a)}}\right)$\hfill \textit{($c>0$ controls degree of exploration)}\\[1ex]
+	\textbf{Multi-Armed Bandit Update:}\\
+	$Q(A) \leftarrow Q(A) + \frac{1}{N(A)}[R - Q(A)]$\\[1ex]
+	\textbf{Policy Improvement Theorem:}\\
+	$\forall s [q_\pi(s, \pi'(s)) \ge v_\pi(s)] \implies \forall s[v_{\pi'}(s) \ge v_\pi(s)]$\\[1ex]
+	\textbf{Importance Sampling Ratio:}\\
+	$\rho_{t:T-1} = \prod_{k=t}^{T-1}{\frac{\pi(A_k|S_k)}{b(A_k|S_k)}}$\\[1ex]
+	\textbf{Off-Policy MC Prediction (w/ Imp. Sampling):}\\
+	$C(S_t, A_t) \leftarrow C(S_t, A_t) + W$ \hfill \textit{(Cumul. weight)}\\
+	$W \leftarrow W \frac{\pi(A_t|S_t)}{b(A_t|S_t)}$ \hfill \textit{(Incr. weight)}\\
+	$Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{W}{C(S_t, A_t)}[G - Q(S_t, A_t)]$
+
+	\vspace{1ex}
+	\section*{Algorithms}
+
+	\begin{algorithm}[H]
+		\caption{Policy Iteration ($V \approx v_*, \pi \approx \pi_*$)}
+		\begin{algorithmic}[1]
+			\State Init $V(s) \in \mathbb{R}$, $\pi(s) \in \mathcal{A}(s)$; $V(\text{term})=0$
+			\Repeat
+			\Repeat \Comment{Policy Evaluation}
+			\State $\Delta \gets 0$
+			\For{each $s \in \mathcal{S}$}
+			\State $v \gets V(s)$
+			\State $V(s) \gets \sum_{s', r} p(s', r | s, \pi(s)) [r + \gamma V(s')]$
+			\State $\Delta \gets \max(\Delta, |v - V(s)|)$
+			\EndFor
+			\Until{$\Delta < \theta$}
+			\State \textit{stable} $\gets$ true \Comment{Policy Improvement}
+			\For{each $s \in \mathcal{S}$}
+			\State $old \gets \pi(s)$
+			\State $\pi(s) \gets \argmax_a \sum_{s', r} p(s', r | s, a) [r + \gamma V(s')]$
+			\If{$old \neq \pi(s)$} \textit{stable} $\gets$ false \EndIf
+			\EndFor
+			\Until{\textit{stable}}
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Value Iteration ($\pi \approx \pi_*$)}
+		\begin{algorithmic}[1]
+			\State Algorithm parameter: threshold $\theta > 0$
+			\State Init $V(s) \in \mathbb{R}$ for all $s \in \mathcal{S}^+$, $V(\text{term}) = 0$
+			\Repeat
+			\State $\Delta \gets 0$
+			\For{each $s \in \mathcal{S}$}
+			\State $v \gets V(s)$
+			\State $V(s) \gets \max_a \sum_{s', r} p(s', r | s, a) [r + \gamma V(s')]$
+			\State $\Delta \gets \max(\Delta, |v - V(s)|)$
+			\EndFor
+			\Until{$\Delta < \theta$}
+			\State \textbf{Output} deterministic policy $\pi \approx \pi_*$ such that:
+			\For{each $s \in \mathcal{S}$}
+			\State $\pi(s) \gets \argmax_a \sum_{s', r} p(s', r | s, a) [r + \gamma V(s')]$
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+
+	\begin{algorithm}[H]
+		\caption{First-visit MC Prediction ($V \approx v_\pi$)}
+		\begin{algorithmic}[1]
+			\State Init $V(s) \in \mathbb{R}$, $Returns(s) \gets [\;]$
+			\For{each episode}
+			\State Generate episode via $\pi$: $S_0, A_0, R_1, \dots, R_T$
+			\State $G \gets 0$
+			\For{$t = T-1, T-2, \dots, 0$}
+			\State $G \gets \gamma G + R_{t+1}$
+			\If{$S_t \notin \{S_0, \dots, S_{t-1}\}$}
+			\State Append $G$ to $Returns(S_t)$
+			\State $V(S_t) \gets \text{average}(Returns(S_t))$
+			\EndIf
+			\EndFor
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{On-policy First-visit MC Control ($\varepsilon$-soft)}
+		\begin{algorithmic}[1]
+			\State Init $\pi \gets$ arbitrary $\varepsilon$-soft, $Q(s,a) \in \mathbb{R}$
+			\State Init $Returns(s,a) \gets [\;]$
+			\For{each episode}
+			\State Generate episode via $\pi$: $S_0, A_0, \dots, R_T$
+			\State $G \gets 0$
+			\For{$t = T-1, \dots, 0$}
+			\State $G \gets \gamma G + R_{t+1}$
+			\If{$(S_t, A_t) \notin \{(S_0, A_0), \dots, (S_{t-1}, A_{t-1})\}$}
+			\State Append $G$ to $Returns(S_t, A_t)$
+			\State $Q(S_t, A_t) \gets \text{average}(Returns(S_t, A_t))$
+			\State $A^* \gets \argmax_a Q(S_t, a)$
+			\For{all $a \in \mathcal{A}(S_t)$}
+			\If{$a = A^*$}
+			\State $\pi(a | S_t) \gets 1 - \varepsilon + \varepsilon/|\mathcal{A}(S_t)|$
+			\Else
+			\State $\pi(a | S_t) \gets \varepsilon/|\mathcal{A}(S_t)|$
+			\EndIf
+			\EndFor
+			\EndIf
+			\EndFor
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Off-policy MC Control ($\pi \approx \pi_*$)}
+		\begin{algorithmic}[1]
+			\State Init $Q(s, a) \in \mathbb{R}$, $C(s, a) \gets 0$
+			\State $\pi(s) \gets \argmax_a Q(s, a)$
+			\For{each episode}
+			\State $b \gets$ any soft policy
+			\State Generate episode via $b$: $S_0, A_0, \dots, R_T$
+			\State $G \gets 0$, $W \gets 1$
+			\For{$t = T-1, \dots, 0$}
+			\State $G \gets \gamma G + R_{t+1}$
+			\State $C(S_t, A_t) \gets C(S_t, A_t) + W$
+			\State $Q(S_t, A_t) \gets Q(S_t, A_t) + \frac{W}{C(S_t, A_t)} [G - Q(S_t, A_t)]$
+			\State $\pi(S_t) \gets \argmax_a Q(S_t, a)$
+			\If{$A_t \neq \pi(S_t)$} \textbf{break} (exit inner loop) \EndIf
+			\State $W \gets W \frac{1}{b(A_t|S_t)}$
+			\EndFor
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Tabular TD(0) Prediction ($V \approx v_\pi$)}
+		\begin{algorithmic}[1]
+			\State Init $V(s) \in \mathbb{R}$, $V(\text{term}) = 0$
+			\For{each episode}
+			\State Init $S$
+			\Repeat
+			\State $A \gets \pi(S)$
+			\State Take $A$, observe $R, S'$
+			\State $V(S) \gets V(S) + \alpha [R + \gamma V(S') - V(S)]$
+			\State $S \gets S'$
+			\Until{$S$ is terminal}
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Sarsa: On-policy TD Control ($Q \approx q_*$)}
+		\begin{algorithmic}[1]
+			\State Init $Q(s, a) \in \mathbb{R}$, $Q(\text{term}, \cdot) = 0$
+			\For{each episode}
+			\State Init $S$
+			\State Choose $A$ from $S$ via $Q$ (e.g., $\varepsilon$-greedy)
+			\Repeat
+			\State Take $A$, observe $R, S'$
+			\State Choose $A'$ from $S'$ via $Q$ ($\varepsilon$-greedy)
+			\State $Q(S,A) \gets Q(S,A) + \alpha [R + \gamma Q(S',A') - Q(S,A)]$
+			\State $S \gets S', A \gets A'$
+			\Until{$S$ is terminal}
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Q-learning: Off-policy TD Control ($\pi \approx \pi_*$)}
+		\begin{algorithmic}[1]
+			\State Init $Q(s, a) \in \mathbb{R}$, $Q(\text{term}, \cdot) = 0$
+			\For{each episode}
+			\State Init $S$
+			\Repeat
+			\State Choose $A$ from $S$ via $Q$ (e.g., $\varepsilon$-greedy)
+			\State Take $A$, observe $R, S'$
+			\State $Q(S,A) \gets Q(S,A) + \alpha [R + \gamma \max_a Q(S', a) - Q(S,A)]$
+			\State $S \gets S'$
+			\Until{$S$ is terminal}
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+	\begin{algorithm}[H]
+		\caption{Double Q-learning ($Q_1 \approx Q_2 \approx q_*$)}
+		\begin{algorithmic}[1]
+			\State Init $Q_1, Q_2 \in \mathbb{R}$, $Q_1(\text{term}, \cdot)=Q_2(\text{term}, \cdot)=0$
+			\For{each episode}
+			\State Init $S$
+			\Repeat
+			\State Choose $A$ from $S$ via $\varepsilon$-greedy in $Q_1 + Q_2$
+			\State Take $A$, observe $R, S'$
+			\State With 0.5 probability:
+			\State \quad $a^* \gets \argmax_a Q_1(S', a)$
+			\State \quad $Q_1(S,A) \gets Q_1(S,A) + \alpha [R + \gamma Q_2(S', a^*) - Q_1(S,A)]$
+			\State Else:
+			\State \quad $a^* \gets \argmax_a Q_2(S', a)$
+			\State \quad $Q_2(S,A) \gets Q_2(S,A) + \alpha [R + \gamma Q_1(S', a^*) - Q_2(S,A)]$
+			\State $S \gets S'$
+			\Until{$S$ is terminal}
+			\EndFor
+		\end{algorithmic}
+	\end{algorithm}
+
+\end{multicols*}
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

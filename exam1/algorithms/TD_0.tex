@@ -1,0 +1,15 @@
+\textbf{Tabular TD(0) for estimating $v_\pi$}
+\begin{itemize}[leftmargin=*]
+	\item[] Input: the policy $\pi$ to be evaluated
+	\item[] Algorithm parameter: step size $\alpha \in (0, 1]$
+	\item[] Initialize $V(s)$, for all $s \in \mathcal{S}^+$, arbitrarily except that $V(\text{terminal}) = 0$
+
+	\item[] Loop for each episode:\\
+	      Initialize $S$\\
+	      Loop for each step of episode:\\
+	      \hspace*{1em} $A \leftarrow$ action given by $\pi$ for $S$\\
+	      \hspace*{1em} Take action $A$, observe $R, S'$\\
+	      \hspace*{1em} $V(S) \leftarrow V(S) + \alpha [R + \gamma V(S') - V(S)]$\\
+	      \hspace*{1em} $S \leftarrow S'$\\
+	      until $S$ is terminal
+\end{itemize}

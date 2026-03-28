@@ -1,0 +1,65 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\author{Caleb Fringer}
+\title{CS 272 Exam 1 Cheatsheet}
+
+\DeclareMathOperator*{\argmax}{argmax}
+
+\begin{document}
+\maketitle
+
+\textbf{Greedy Policy $\ne$ Epsilon-Greedy!!!} MC-Control uses soft policy update, not greedy! \\
+\textbf{Maximization Bias} Q-learning uses a max operation, which biases its value upwards \\
+\textbf{Bootstrapping} DP and ALL TD bootstrap. MC does not.
+\textbf{Sampling} DP is the only one that doesn't sample.
+\textbf{Sarsa vs Q-learning} Q-learning is optimistic, Sarsa is "safer"
+
+\begin{align*}
+	 & \text{\textbf{Batch Update Differences}}                                                                                                                \\
+	 & \text{MC: Target value is } \mathbb{E}_\pi[G_t|S_t] \qquad \text{TD(0): Target value is } R_{t+1} + Q_\pi(S_{t+1})                                      \\
+	 & \text{\textbf{DP Update}}                                                                                                                               \\
+	 & V(S_t) \leftarrow \mathbb{E_{\pi}}[R_{t+1} + \gamma V(S_{t+1})]                                                                                         \\
+	 & \text{\textbf{MC Prediction Update}}                                                                                                                    \\
+	 & V(S_t) \leftarrow V(S_t) + \alpha[G_t  - V(S_t)]                                                                                                        \\
+	 & \text{\textbf{MC Control Update}}                                                                                                                       \\
+	 & Q(S_t,A_t) \leftarrow Q(S_t,A_t) + \alpha[G_t  - Q(S_t,A_t)]                                                                                            \\
+	 & \text{\textbf{TD(0) Update}}                                                                                                                            \\
+	 & V(S) \leftarrow V(S) + \alpha[R + \gamma V(S') - V(S)]                                                                                                  \\
+	 & \text{\textbf{SARSA Update}}                                                                                                                            \\
+	 & Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma Q(S',A') - Q(S,A)]                                                                                         \\
+	 & \text{\textbf{Q-Learning Update}}                                                                                                                       \\
+	 & Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma \max_a Q(S',a) - Q(S,A)]                                                                                   \\
+	 & \text{\textbf{Upper Confidence Bound Action Selection}}                                                                                                 \\
+	 & a_t = \argmax_{a \in \mathcal{A}}(\bar{Q}(a) + \sqrt{\frac{2 \ln{t}}{N_t(a)}})                                                                          \\
+	 & \text{\textbf{Policy Improvement Theorem}}                                                                                                              \\
+	 & \forall s [q_\pi(s, \pi'(s)) \ge v_\pi(s)] \implies \forall s[v_{\pi'}(s) \ge v_\pi(s)], s \in \mathcal{S}                                              \\
+	 & \text{\textbf{Importance Sampling}}                                                                                                                     \\
+	 & \rho_{t:T-1} = \prod_{k=t}^{T-1}{\frac{\pi(A_k|S_k)}{b(A_k|S_k)}}                                                                                       \\
+	 & \text{\textbf{Off-Policy MC Prediction (w/ Importance Sampling)}}                                                                                       \\
+	 & C(S_t, A_t) \leftarrow C(S_t, A_t) + W \qquad \text{(Cumulative weight update)}                                                                         \\
+	 & Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{W}{C(S_t, A_t)}[G - Q(S_t, A_t)] \qquad \text{(Incremental Q update, weighted by importance sampling ratio)} \\
+	 & W \leftarrow W \frac{\pi(A_t|S_t)}{b(A_t|S_t)} \qquad \text{(Incremental weight update)}                                                                \\
+	 & \text{\textbf{Multi-Armed Bandit Update}}                                                                                                               \\
+	 & Q(A) \leftarrow Q(A) + \frac{1}{N(A)}[R - Q(A)]                                                                                                         \\
+	 & \text{\textbf{Double Q-Learning Update}}                                                                                                                \\
+	 & Q_1(S,A) \leftarrow Q_1(S,A) + \alpha[R + \gamma Q_2(S', \argmax_a Q_2(S',a)) - Q_2(S,A)]
+\end{align*}
+
+\input{algorithms/mc_prediction.tex}
+\input{algorithms/on_policy_mc_control.tex}
+\input{algorithms/off_policy_mc_control.tex}
+\input{algorithms/TD_0.tex}
+\input{algorithms/SARSA.tex}
+\input{algorithms/q_learning.tex}
+\input{algorithms/double_q_learning.tex}
+
+
+\end{document}
+
+

@@ -1,0 +1,16 @@
+\textbf{First-visit MC prediction, for estimating $V \approx v_\pi$}
+\begin{itemize}[leftmargin=*]
+	\item[] Input: a policy $\pi$ to be evaluated
+	\item[] Initialize:\\
+	      $V(s) \in \mathbb{R}$, arbitrarily, for all $s \in \mathcal{S}$\\
+	      $Returns(s) \leftarrow$ an empty list, for all $s \in \mathcal{S}$
+
+	\item[] Loop forever (for each episode):\\
+	      Generate an episode following $\pi$: $S_0, A_0, R_1, S_1, A_1, R_2, \ldots, S_{T-1}, A_{T-1}, R_T$\\
+	      $G \leftarrow 0$\\
+	      Loop for each step of episode, $t = T-1, T-2, \ldots, 0$:\\
+	      \hspace*{1em} $G \leftarrow \gamma G + R_{t+1}$\\
+	      \hspace*{1em} Unless $S_t$ appears in $S_0, S_1, \ldots, S_{t-1}$:\\
+	      \hspace*{2em} Append $G$ to $Returns(S_t)$\\
+	      \hspace*{2em} $V(S_t) \leftarrow \text{average}(Returns(S_t))$
+\end{itemize}

@@ -1,0 +1,14 @@
+\textbf{Q-learning (off-policy TD control) for estimating $\pi \approx \pi_*$}
+\begin{itemize}[leftmargin=*]
+	\item[] Algorithm parameters: step size $\alpha \in (0, 1]$, small $\varepsilon > 0$
+	\item[] Initialize $Q(s, a)$, for all $s \in \mathcal{S}^+, a \in \mathcal{A}(s)$, arbitrarily except that $Q(\text{terminal}, \cdot) = 0$
+
+	\item[] Loop for each episode:\\
+	      Initialize $S$\\
+	      Loop for each step of episode:\\
+	      \hspace*{1em} Choose $A$ from $S$ using policy derived from $Q$ (e.g., $\varepsilon$-greedy)\\
+	      \hspace*{1em} Take action $A$, observe $R, S'$\\
+	      \hspace*{1em} $Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma \max_a Q(S', a) - Q(S, A)]$\\
+	      \hspace*{1em} $S \leftarrow S'$\\
+	      until $S$ is terminal
+\end{itemize}

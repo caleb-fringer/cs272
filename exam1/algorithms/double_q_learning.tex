@@ -1,0 +1,17 @@
+\textbf{Double Q-learning, for estimating $Q_1 \approx Q_2 \approx q_*$}
+\begin{itemize}[leftmargin=*]
+	\item[] Algorithm parameters: step size $\alpha \in (0, 1]$, small $\varepsilon > 0$
+	\item[] Initialize $Q_1(s, a)$ and $Q_2(s, a)$, for all $s \in \mathcal{S}^+, a \in \mathcal{A}(s)$, such that $Q(\text{terminal}, \cdot) = 0$
+
+	\item[] Loop for each episode:\\
+	      Initialize $S$\\
+	      Loop for each step of episode:\\
+	      \hspace*{1em} Choose $A$ from $S$ using the policy $\varepsilon$-greedy in $Q_1 + Q_2$\\
+	      \hspace*{1em} Take action $A$, observe $R, S'$\\
+	      \hspace*{1em} With 0.5 probability:\\
+	      \hspace*{2em} $Q_1(S, A) \leftarrow Q_1(S, A) + \alpha \Big(R + \gamma Q_2(S', \arg\max_a Q_1(S', a)) - Q_1(S, A)\Big)$\\
+	      \hspace*{1em} else:\\
+	      \hspace*{2em} $Q_2(S, A) \leftarrow Q_2(S, A) + \alpha \Big(R + \gamma Q_1(S', \arg\max_a Q_2(S', a)) - Q_2(S, A)\Big)$\\
+	      \hspace*{1em} $S \leftarrow S'$\\
+	      until $S$ is terminal
+\end{itemize}

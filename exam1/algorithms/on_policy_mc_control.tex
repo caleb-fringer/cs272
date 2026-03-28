@@ -1,0 +1,23 @@
+\textbf{On-policy first-visit MC control (for $\varepsilon$-soft policies), estimates $\pi \approx \pi_*$}
+\begin{itemize}[leftmargin=*]
+	\item[] Algorithm parameter: small $\varepsilon > 0$
+	\item[] Initialize:\\
+	      $\pi \leftarrow$ an arbitrary $\varepsilon$-soft policy\\
+	      $Q(s, a) \in \mathbb{R}$ (arbitrarily), for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$\\
+	      $Returns(s, a) \leftarrow$ empty list, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$
+
+	\item[] Repeat forever (for each episode):\\
+	      Generate an episode following $\pi$: $S_0, A_0, R_1, \ldots, S_{T-1}, A_{T-1}, R_T$\\
+	      $G \leftarrow 0$\\
+	      Loop for each step of episode, $t = T-1, T-2, \ldots, 0$:\\
+	      \hspace*{1em} $G \leftarrow \gamma G + R_{t+1}$\\
+	      \hspace*{1em} Unless the pair $S_t, A_t$ appears in $S_0, A_0, S_1, A_1 \ldots, S_{t-1}, A_{t-1}$:\\
+	      \hspace*{2em} Append $G$ to $Returns(S_t, A_t)$\\
+	      \hspace*{2em} $Q(S_t, A_t) \leftarrow \text{average}(Returns(S_t, A_t))$\\
+	      \hspace*{2em} $A^* \leftarrow \arg\max_a Q(S_t, a)$ \hfill (with ties broken arbitrarily)\\
+	      \hspace*{2em} For all $a \in \mathcal{A}(S_t)$:\\
+	      \hspace*{3em} $\pi(a | S_t) \leftarrow
+		      \begin{cases}
+			      1 - \varepsilon + \varepsilon / |\mathcal{A}(S_t)| & \text{if } a = A^*    \\
+			      \varepsilon / |\mathcal{A}(S_t)|                   & \text{if } a \neq A^*\end{cases}$
+\end{itemize}

@@ -1,0 +1,20 @@
+\textbf{Off-policy MC control, for estimating $\pi \approx \pi_*$}
+\begin{itemize}[leftmargin=*]
+	\item[] Initialize, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$:\\
+	      $Q(s, a) \in \mathbb{R}$ (arbitrarily)\\
+	      $C(s, a) \leftarrow 0$\\
+	      $\pi(s) \leftarrow \arg\max_a Q(s, a)$ \quad (with ties broken consistently) % Greedy policy (GPI)
+
+	\item[] Loop forever (for each episode):\\
+	      $b \leftarrow$ any soft policy\\
+	      Generate an episode using $b$: $S_0, A_0, R_1, \ldots, S_{T-1}, A_{T-1}, R_T$\\
+	      $G \leftarrow 0$\\
+	      $W \leftarrow 1$\\
+	      Loop for each step of episode, $t = T-1, T-2, \ldots, 0$:\\
+	      \hspace*{1em} $G \leftarrow \gamma G + R_{t+1}$\\
+	      \hspace*{1em} $C(S_t, A_t) \leftarrow C(S_t, A_t) + W$\\
+	      \hspace*{1em} $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{W}{C(S_t, A_t)} [G - Q(S_t, A_t)]$\\
+	      \hspace*{1em} $\pi(S_t) \leftarrow \arg\max_a Q(S_t, a)$ \quad (with ties broken consistently)\\
+	      \hspace*{1em} If $A_t \neq \pi(S_t)$ then exit inner Loop (proceed to next episode)\\
+	      \hspace*{1em} $W \leftarrow W \frac{1}{b(A_t|S_t)}$
+\end{itemize}
