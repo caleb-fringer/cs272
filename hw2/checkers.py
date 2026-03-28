@@ -1,3 +1,4 @@
+from board import Board
 import numpy as np
 from pettingzoo.utils import AgentSelector
 from os import path
@@ -47,16 +48,6 @@ def coord_to_pos(row, col):
     '''
     return row * 3 + col
 
-def flip_board(board):
-    '''
-    Given a board, rotate it 180 degrees and multiply values by -1.
-    This ensures that the current agent always sees the board with
-    1 representing their pieces, and forward being in the decreasing
-    row dimension.
-    '''
-    J = np.identity(6)[:, ::-1]
-    return -1 * J @ board @ J
-
 class CheckersEnv(AECEnv):
     metadata = {
         "name": "checkers_environment_v0",
@@ -67,46 +58,67 @@ class CheckersEnv(AECEnv):
         self.timestep = None
         self._agent_selector = None
         self.current_agent = None
+        self.board = None
+        self.legal_action_mask = None
         self.observations = {}
 
     def reset(self, seed=None, options=None):
         self.timestep = 0
         self._agent_selector = AgentSelector(self.possible_agents)
         self.current_agent = self._agent_selector.next()
-        self.observations["board"] = np.array([[ 0,-1, 0,-1, 0,-1],
-                                               [-1, 0,-1, 0,-1, 0],
-                                               [ 0, 0, 0, 0, 0, 0],
-                                               [ 0, 0, 0, 0, 0, 0],
-                                               [ 0, 1, 0, 1, 0, 1],
-                                               [ 1, 0, 1, 0, 1, 0]])
-        self.observations["legal_action_mask"] = calculate_legal_action_mask(self.observations["board"])
-        return self.observations
+        self.board = Board()
+        self.legal_action_mask = calculate_legal_action_mask(self.board.get_board())
+        return self.get_observations()
 
     def step(self, action):
         agent = self.current_agent
+        board = self.board
         pos, direction = action
-        coords = pos_to_coord(pos)
-        destination = tuple(np.array(coords) + np.array(direction.vector))
-        if self.current_agent == "red":
-            destination *= -1
-        self.observations["board"][destination] = self.observations["board"][coords]
-        self.observations["board"][coords] = 0
 
-        self.observations["legal_action_mask"] = calculate_legal_action_mask(self.observations["board"])
+        # Convert pos ({pos|0<=pos<18}) to 6x6 board coords
+        src_coords = pos_to_coord(pos)
+
+        direction_vec = np.array(direction.vector)
+
+        # Always use directions relative to the current player's perspective
+        if agent == "red":
+            direction_vec *= -1
+
+        # Calculate destination square
+        destination_vec = np.array(src_coords) + direction_vec
+        destination = tuple(destination_vec)
+
+        # TODO: CRITICAL BUG. This doesn't work unless I negate the board for red.
+        is_capture = board[destination] < 0
+
+        board.move(src_coords, tuple(direction_vec)) 
+
+        # Handle capture by moving an additional square in that direction
+        if is_capture:
+            board.move(destination, tuple(direction_vec)) 
+        
+        # TODO: Add check to see if the current player must move again (via
+        # capture), or if we can move to the next player.
         self.current_agent = self._agent_selector.next()
-        # TODO: Determine if its the next players turn
-        return self.observations["board"]
+        return self.get_observations()
 
     def render(self):
-        print("-"*13)
-        for row in self.observations["board"]:  # ty:ignore[not-iterable]
-            squares = map(str, row)
-            line = "|".join(squares).replace("-1", "R").replace("1", "B").replace("0", " ")
-            print(f"|{line}|")
-            print("-"*13)
+        self.board.render() 
+
+    def get_observations(self):
+        '''
+        Get current set of observations as a (5,6,6) array where channel 0 is
+        the board state and channels 1-4 are the legal action masks of moves
+        FR,FL,BR,BL in that order.
+        '''
+        board = self.board.get_board().reshape((1,6,6))
+        mask = calculate_legal_action_mask(board, player=self.current_agent)
+        self.legal_action_mask = mask
+        observations = np.concatenate([board,mask], axis=0)
+        return observations
 
     def observation_space(self, agent):
-        return MultiDiscrete([6,6,3])
+        return MultiDiscrete([6,6,5])
 
     def action_space(self, agent):
         '''
@@ -117,4 +129,3 @@ class CheckersEnv(AECEnv):
         Use parse_position(pos) to get the true board co-ordinates
         '''
         return MultiDiscrete([18,4])
-
