@@ -54,12 +54,15 @@ class Board():
             line = "|".join(squares).replace("-1", "R").replace("1", "B").replace("0", " ")
             print(f"|{line}|")
             print("-"*13)
-    def move(self, row, col, dir_row, dir_col):
+       
+    def move(self, src, dir):
         '''
         Move the piece at (row, col) in the direction of (dir_row, dir_col), performing bounds
         checks. If another piece is in the destination square, the piece is 
         overwritten without regard to the legality of the move.
         '''
+        row, col = src
+        dir_row, dir_col = dir
         board = self._board
         if not (0 <= row < board.shape[0]) or not (0 <= col < board.shape[1]):
             raise IndexError(f"Source position ({row,col}) out of bounds")
