@@ -22,13 +22,54 @@ class Direction(Enum):
         ]
         return np.array(lookup[self.value])
 
-def calculate_legal_action_mask(board):
-    '''
-    Calculates the legal action mask for a board.
-    '''
-    fwd = np.array([np.zeros((6,6)), board]).max(axis=0) > 0
-    back = np.array([np.ones((6,6)), board]).max(axis=0) - 1 > 0
-    return np.array((fwd, back))
+def calculate_legal_action_mask(board, player="black"):
+    if player == "red":
+        board *= -1
+    # 1. Identify which pieces can move in which general direction
+    is_friendly = board >= 1
+    is_king = board == 2
+    
+    # 2. Initialize the 4-layer mask (one for each Direction enum)
+    # Shape: (4, 6, 6)
+    mask = np.zeros((4, *board.shape), dtype=bool)
+
+    def get_dest_map(direction):
+        '''
+        Creates a 'ghost' board shifted so that the destination square 
+        of a move aligns with the starting square.
+        '''
+        dr, dc = direction.vector
+        dest_map = np.ones_like(board) # Default to 1 (Friendly) to block OOB
+        
+        # Determine Slices based on vector
+        # If dr is -1 (UP), we take board[0:5] and map it to dest[1:6]
+        # This makes the piece at row 1 see what's at row 0.
+        src_r = slice(0, -1) if dr == -1 else slice(1, None) if dr == 1 else slice(None)
+        dst_r = slice(1, None) if dr == -1 else slice(0, -1) if dr == 1 else slice(None)
+        
+        # If dc is 1 (RIGHT), we take board[1:6] and map it to dest[0:5]
+        # This makes the piece at col 0 see what's at col 1.
+        src_c = slice(1, None) if dc == 1 else slice(0, -1) if dc == -1 else slice(None)
+        dst_c = slice(0, -1) if dc == 1 else slice(1, None) if dc == -1 else slice(None)
+        
+        dest_map[dst_r, dst_c] = board[src_r, src_c]
+        return dest_map
+
+    # 3. Fill the mask layers using the Enum
+    for d in Direction:
+        dest_contents = get_dest_map(d)
+        
+        # Logic: 
+        # Layer 0 & 1 (Forward): Requires any friendly piece (1 or 2)
+        # Layer 2 & 3 (Backward): Requires a King (2)
+        # ALL: Destination must be < 1 (Empty 0 or Enemy -1)
+        
+        if d in (Direction.FR, Direction.FL):
+            mask[d.value] = is_friendly & (dest_contents < 1)
+        else:
+            mask[d.value] = is_king & (dest_contents < 1)
+
+    return mask
 
 def pos_to_coord(pos):
     '''
