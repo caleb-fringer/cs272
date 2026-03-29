@@ -147,20 +147,21 @@ class CheckersEnv(AECEnv):
 
     def get_observations(self):
         '''
-        Get current set of observations as a (5,6,6) array where channel 0 is
-        the board state and channels 1-4 are the legal action masks of moves
-        FR,FL,BR,BL in that order.
+        Get current set of observations & corresponding legal_action_mask,
+        each as a (4,6,6) MultiBinary matrix
         '''
-        board = self.board.get_board().reshape((1,6,6))
+        board = self.board.get_board()
         mask = calculate_legal_action_mask(board, player=self.current_agent)
         self.legal_action_mask = mask
-        observations = np.concatenate([board,mask], axis=0)
-        return observations
+        return {
+            "observations": board,
+            "legal_action_mask": mask,
+        }
 
     def observation_space(self, agent):
         return Dict({
-            "observations": MultiBinary([6,6,4]),
-            "legal_action_mask": MultiBinary([6,6,4])
+            "observations": MultiBinary([4,6,6]),
+            "legal_action_mask": MultiBinary([4,6,6])
         })
 
     def action_space(self, agent):
