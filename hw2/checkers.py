@@ -2,7 +2,7 @@ from board import Board
 import numpy as np
 from pettingzoo.utils import AgentSelector
 from os import path
-from gymnasium.spaces import Discrete, MultiDiscrete
+from gymnasium.spaces import MultiDiscrete, Dict, MultiBinary
 from pettingzoo import AECEnv
 from enum import Enum
 
@@ -159,7 +159,10 @@ class CheckersEnv(AECEnv):
         return observations
 
     def observation_space(self, agent):
-        return MultiDiscrete([6,6,5])
+        return Dict({
+            "observations": MultiBinary([6,6,4]),
+            "legal_action_mask": MultiBinary([6,6,4])
+        })
 
     def action_space(self, agent):
         '''
