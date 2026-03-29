@@ -23,52 +23,51 @@ class Direction(Enum):
         return np.array(lookup[self.value])
 
 def calculate_legal_action_mask(board, player="black"):
-    if player == "red":
-        board *= -1
-    # 1. Identify which pieces can move in which general direction
-    is_friendly = board >= 1
-    is_king = board == 2
+    '''
+    Calculates a (4, 6, 6) mask of legal moves for the given player.
+    Channels correspond to the Direction enum relative to the player:
+    0: Forward-Right (FR)
+    1: Forward-Left  (FL)
+    2: Backward-Right(BR)
+    3: Backward-Left (BL)
+    '''
+    mask = np.zeros((4, 6, 6), dtype=np.int8)
     
-    # 2. Initialize the 4-layer mask (one for each Direction enum)
-    # Shape: (4, 6, 6)
-    mask = np.zeros((4, *board.shape), dtype=bool)
+    # 1. Determine player-specific channels and relative movement vectors
+    pawn_c, king_c = (1,3) if player == "red" else (0,1)
 
-    def get_dest_map(direction):
-        '''
-        Creates a 'ghost' board shifted so that the destination square 
-        of a move aligns with the starting square.
-        '''
-        dr, dc = direction.vector
-        dest_map = np.ones_like(board) # Default to 1 (Friendly) to block OOB
+    # 2. Determine valid destinations
+    # A destination is valid if it is empty OR occupied by an enemy.
+    # This is mathematically equivalent to: NOT occupied by a friendly piece.
+    friendly_pieces = board[pawn_c] | board[king_c]
+    valid_destinations = 1 - friendly_pieces 
+    
+    # 3. Calculate masks for each direction
+    for direction in Direction:
+        dir_idx = direction.value
+        (dr, dc) = -1*direction.vector if player == "red" else direction.vector
+            
+        # Identify which pieces are allowed to move in this direction
+        # Kings can move any direction; Pawns can only move Forward (channels 0 and 1)
+        capable_pieces = np.copy(board[king_c])
+        if dir_idx in (0, 1):
+            capable_pieces |= board[pawn_c]
+            
+        # Define matrix slices based on the direction vector
+        # (This automatically handles the board boundaries)
+        src_r = slice(1, None) if dr < 0 else slice(None, -1)
+        dst_r = slice(None, -1) if dr < 0 else slice(1, None)
         
-        # Determine Slices based on vector
-        # If dr is -1 (UP), we take board[0:5] and map it to dest[1:6]
-        # This makes the piece at row 1 see what's at row 0.
-        src_r = slice(0, -1) if dr == -1 else slice(1, None) if dr == 1 else slice(None)
-        dst_r = slice(1, None) if dr == -1 else slice(0, -1) if dr == 1 else slice(None)
+        src_c = slice(1, None) if dc < 0 else slice(None, -1)
+        dst_c = slice(None, -1) if dc < 0 else slice(1, None)
         
-        # If dc is 1 (RIGHT), we take board[1:6] and map it to dest[0:5]
-        # This makes the piece at col 0 see what's at col 1.
-        src_c = slice(1, None) if dc == 1 else slice(0, -1) if dc == -1 else slice(None)
-        dst_c = slice(0, -1) if dc == 1 else slice(1, None) if dc == -1 else slice(None)
+        # A move is valid if a capable piece exists at the source AND 
+        # the corresponding destination is valid
+        valid_moves = capable_pieces[src_r, src_c] & valid_destinations[dst_r, dst_c]
         
-        dest_map[dst_r, dst_c] = board[src_r, src_c]
-        return dest_map
-
-    # 3. Fill the mask layers using the Enum
-    for d in Direction:
-        dest_contents = get_dest_map(d)
+        # Map the valid moves back into the source locations on the mask
+        mask[dir_idx, src_r, src_c] = valid_moves
         
-        # Logic: 
-        # Layer 0 & 1 (Forward): Requires any friendly piece (1 or 2)
-        # Layer 2 & 3 (Backward): Requires a King (2)
-        # ALL: Destination must be < 1 (Empty 0 or Enemy -1)
-        
-        if d in (Direction.FR, Direction.FL):
-            mask[d.value] = is_friendly & (dest_contents < 1)
-        else:
-            mask[d.value] = is_king & (dest_contents < 1)
-
     return mask
 
 def pos_to_coord(pos):
