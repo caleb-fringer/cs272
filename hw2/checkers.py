@@ -34,7 +34,7 @@ def calculate_legal_action_mask(board, player="black"):
     mask = np.zeros((4, 6, 6), dtype=np.int8)
     
     # 1. Determine player-specific channels and relative movement vectors
-    pawn_c, king_c = (1,3) if player == "red" else (0,1)
+    pawn_c, king_c = (1,3) if player == "red" else (0,2)
 
     # 2. Determine valid destinations
     # A destination is valid if it is empty OR occupied by an enemy.
