@@ -2,14 +2,24 @@ import numpy as np
 
 class Board():
     def __init__(self):
-        self._board = np.array([[ 0,-1, 0,-1, 0,-1],
-                                [-1, 0,-1, 0,-1, 0],
-                                [ 0, 0, 0, 0, 0, 0],
-                                [ 0, 0, 0, 0, 0, 0],
-                                [ 0, 1, 0, 1, 0, 1],
-                                [ 1, 0, 1, 0, 1, 0]],
-                               dtype=np.int8)
+        pawn_row = np.array([[0,1]*3], dtype=np.int8)
 
+        black_pawns = np.concat([
+            np.zeros((4,6), dtype=np.bool),
+            pawn_row, 
+            np.roll(pawn_row,1)
+        ], dtype=np.int8)
+
+        red_pawns = np.roll(black_pawns, 2, axis=0)
+        self._board = np.concat([
+            black_pawns,
+            red_pawns,
+            # Black kings
+            np.zeros_like(black_pawns),
+            # Red kings
+            np.zeros_like(red_pawns),
+        ]).reshape((4,6,6))
+             
     def __getitem__(self, position):
         '''
         Get the item at position using the current board orientation.

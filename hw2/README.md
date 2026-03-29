@@ -9,7 +9,7 @@
 | Agents | 2 |
 | Action Shape | (2,) |
 | Action Values | MultiDiscrete([18,4])
-| Observation Shape | (6,6,8) |
+| Observation Shape | (8,6,6) |
 | Observation Values | [0,1] |
 
 ## Observation Space
