@@ -1,9 +1,19 @@
-import checkers
+from checkers import Direction, CheckersEnv
 
-env = checkers.CheckersEnv()
+env = CheckersEnv()
 env.reset()
 
-env.step((13,checkers.Direction.FR))
-env.render()
-env.step((3,checkers.Direction.FL))
-env.render()
+moves = [
+    (14, Direction.FL),
+    (4, Direction.FL),
+    (11, Direction.FL), # Black captures red
+    (1, Direction.FR), # Red captures black
+    (13, Direction.FL),
+    (6, Direction.FL), # Red captures black
+    (17, Direction.FR), # Black moves out of the way
+    (13, Direction.FL), # Red gets promoted to king
+]
+
+for move in moves:
+    env.step(move)
+    env.render()

@@ -123,13 +123,15 @@ class CheckersEnv(AECEnv):
         # Always use directions relative to the current player's perspective
         if agent == "red":
             direction_vec *= -1
-
         # Calculate destination square
         destination_vec = np.array(src_coords) + direction_vec
         destination = tuple(destination_vec)
 
-        # TODO: CRITICAL BUG. This doesn't work unless I negate the board for red.
-        is_capture = board[destination] < 0
+        # Check if the move results in a capture
+        b = board.get_board()
+        enemy_pawns_chan, enemy_kings_chan = (0,2) if agent == "red" else (1,3)
+        enemy_locations = b[enemy_pawns_chan] | b[enemy_kings_chan]
+        is_capture = enemy_locations[destination] == 1
 
         board.move(src_coords, tuple(direction_vec)) 
 
