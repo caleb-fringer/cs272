@@ -141,6 +141,19 @@ class CheckersEnv(AECEnv):
         # Convert pos ({pos|0<=pos<18}) to 6x6 board coords
         src_coords = pos_to_coord(pos)
 
+        # Ensure dictionaries exist (if not initialized in reset)
+        if not hasattr(self, "terminations"):
+            self.terminations = {a: False for a in self.possible_agents}
+            self.rewards = {a: 0 for a in self.possible_agents}
+
+        # 1. ILLEGAL ACTION PENALTY
+        if self.legal_action_mask[action_channel, src_coords[0], src_coords[1]] == 0:
+            self.rewards[agent] = -1
+            other_agent = "red" if agent == "black" else "black"
+            self.rewards[other_agent] = 0
+            self.terminations = {a: True for a in self.possible_agents}
+            return self.get_observations()
+
         # 2. PERFORM LEGAL MOVE
         is_capture = action_type == 1
         direction_vec = direction.vector
@@ -176,7 +189,27 @@ class CheckersEnv(AECEnv):
                 board[destination] = np.array([0,0,1,0])
                 promoted = True
 
+        # 4. CHECK WIN/LOSS CONDITIONS
         b = board.get_board()
+        black_pieces = np.sum(b[0]) + np.sum(b[2])
+        red_pieces = np.sum(b[1]) + np.sum(b[3])
+
+        game_over = False
+        if black_pieces == 0:
+            self.rewards["red"] = 1
+            self.rewards["black"] = -1
+            game_over = True
+        elif red_pieces == 0:
+            self.rewards["black"] = 1
+            self.rewards["red"] = -1
+            game_over = True
+
+        if game_over:
+            self.terminations = {a: True for a in self.possible_agents}
+            # Mask is empty on game over
+            self.legal_action_mask = np.zeros((8, 6, 6), dtype=np.int8)
+            return self.get_observations()
+
         # 5. HANDLE MULTI-JUMPS & TURN PROGRESSION
         # Standard Checkers Rules: A turn does not end if a piece can jump again, 
         # UNLESS that piece just promoted to a King, which ends the turn immediately.
