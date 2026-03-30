@@ -4,9 +4,13 @@ from pettingzoo.utils import AgentSelector
 from os import path
 from gymnasium.spaces import MultiDiscrete, Dict, MultiBinary
 from pettingzoo import AECEnv
-from enum import Enum
+from enum import IntEnum
 
-class Direction(Enum):
+class ActionType(IntEnum):
+    MOVE = 0
+    CAPTURE = 1
+
+class Direction(IntEnum):
     FR = 0
     FL = 1
     BR = 2 
@@ -41,13 +45,12 @@ def calculate_legal_action_mask(board, player="black", active_piece=None):
     
     # 3. Calculate masks for each direction
     for direction in Direction:
-        dir_idx = direction.value
         (dr, dc) = -1*direction.vector if player == "red" else direction.vector
             
         # Identify which pieces are allowed to move in this direction
         # Kings can move any direction; Pawns can only move Forward (channels 0 and 1)
         capable_pieces = np.copy(board[king_c])
-        if dir_idx in (0, 1):
+        if direction in (0, 1):
             capable_pieces |= board[pawn_c]
             
         # If we are in the middle of a multi-jump sequence, ONLY the active piece can move
@@ -63,7 +66,7 @@ def calculate_legal_action_mask(board, player="black", active_piece=None):
         dst_c_1 = slice(None, -1) if dc < 0 else slice(1, None)
         
         valid_moves = capable_pieces[src_r_1, src_c_1] & empty_squares[dst_r_1, dst_c_1]
-        mask[dir_idx, src_r_1, src_c_1] = valid_moves
+        mask[direction, src_r_1, src_c_1] = valid_moves
         
         # --- CAPTURE MOVES (2-Step) ---
         # Define 2-step source, intermediate (enemy), and destination (empty) slices
@@ -81,7 +84,7 @@ def calculate_legal_action_mask(board, player="black", active_piece=None):
         valid_captures = (capable_pieces[src_r_2, src_c_2] & 
                           enemy_pieces[mid_r, mid_c] & 
                           empty_squares[dst_r_2, dst_c_2])
-        mask[dir_idx + 4, src_r_2, src_c_2] = valid_captures
+        mask[direction + 4, src_r_2, src_c_2] = valid_captures
         
     # 4. Enforce Forced Captures: If ANY capture is possible, clear all regular moves
     if np.any(mask[4:8]):
@@ -132,18 +135,15 @@ class CheckersEnv(AECEnv):
     def step(self, action):
         agent = self.current_agent
         board = self.board
-        pos, action_channel = action # action_channel is 0-7
+        pos, action_type, direction = action 
+        action_channel = action_type * 4 + direction
 
         # Convert pos ({pos|0<=pos<18}) to 6x6 board coords
         src_coords = pos_to_coord(pos)
 
         # 2. PERFORM LEGAL MOVE
-        is_capture = action_channel >= 4
-        dir_idx = action_channel % 4
-        direction = Direction(dir_idx)
-        direction_vec = np.array(direction.vector)
-
-        # Always use directions relative to the current player's perspective
+        is_capture = action_type == 1
+        direction_vec = direction.vector
         
         if agent == "red":
             direction_vec *= -1
@@ -176,6 +176,7 @@ class CheckersEnv(AECEnv):
                 board[destination] = np.array([0,0,1,0])
                 promoted = True
 
+        b = board.get_board()
         # 5. HANDLE MULTI-JUMPS & TURN PROGRESSION
         # Standard Checkers Rules: A turn does not end if a piece can jump again, 
         # UNLESS that piece just promoted to a King, which ends the turn immediately.
@@ -216,6 +217,8 @@ class CheckersEnv(AECEnv):
     def action_space(self, agent):
         '''
         pos: Square number (0 to 17)
-        direction: 0-3 for regular moves (FR, FL, BR, BL), 4-7 for capture moves.
+        action: 0 for regular move, 1 for capture
+        direction: 0-3 for FR, FL, BR, BL respectively, consistent w/ 
+        Direction enum
         '''
-        return MultiDiscrete([18, 8])
+        return MultiDiscrete([18, 2, 4])
