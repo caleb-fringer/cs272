@@ -116,6 +116,7 @@ class CheckersEnv(AECEnv):
     }
 
     def __init__(self):
+        super().__init__()
         self.possible_agents = ["black", "red"]
         self.timestep = None
         self._agent_selector = None
@@ -130,7 +131,7 @@ class CheckersEnv(AECEnv):
         self._agent_selector = AgentSelector(self.agents)
         self.agent_selection = self._agent_selector.next()
         self.board = Board()
-        self.legal_action_mask = {agent: calculate_legal_action_mask(self.board.get_board()) for agent in self.agents}
+        self.legal_action_mask = {agent: calculate_legal_action_mask(self.board.get_board(), player=agent) for agent in self.agents}
         self.rewards = {agent: 0 for agent in self.agents}
         self._cumulative_rewards = {agent: 0 for agent in self.agents}
         self.terminations = {agent: False for agent in self.agents}
@@ -139,11 +140,19 @@ class CheckersEnv(AECEnv):
         self.observations = {agent: None for agent in self.agents}
 
     def step(self, action):
-        self.timestep += 1
+        # Handle dead steps
+        if self.terminations[self.agent_selection] or self.truncations[self.agent_selection]:
+            return self._was_dead_step(action)
+
         agent = self.agent_selection
+        self._clear_rewards()
+        self.timestep += 1
         board = self.board
-        pos, action_type, direction = action 
-        action_channel = action_type * 4 + direction
+        
+        # Unpack integers and cast back to Enum
+        pos, action_type, direction_idx = action 
+        action_channel = action_type * 4 + direction_idx
+        direction = Direction(direction_idx)
 
         # Convert pos ({pos|0<=pos<18}) to 6x6 board coords
         src_coords = pos_to_coord(pos)
@@ -154,6 +163,7 @@ class CheckersEnv(AECEnv):
             other_agent = "red" if agent == "black" else "black"
             self.rewards[other_agent] = 0
             self.terminations = {a: True for a in self.possible_agents}
+            self._accumulate_rewards()
             return
 
         # 2. PERFORM LEGAL MOVE
@@ -209,7 +219,8 @@ class CheckersEnv(AECEnv):
         if game_over:
             self.terminations = {a: True for a in self.possible_agents}
             # Mask is empty on game over
-            self.legal_action_mask = {agent: np.zeros((8, 6, 6), dtype=np.int8) for agent in self.agents}
+            self.legal_action_mask = {a: np.zeros((8, 6, 6), dtype=np.int8) for a in self.agents}
+            self._accumulate_rewards()
             return 
 
         # 5. HANDLE MULTI-JUMPS & TURN PROGRESSION
@@ -222,12 +233,22 @@ class CheckersEnv(AECEnv):
             if np.any(new_mask[4:8]):
                 # Captures are available! Update mask, DO NOT switch agent
                 self.legal_action_mask[agent] = new_mask
+                self._accumulate_rewards()
                 return 
 
-        # If we reach here, the turn is over
+        # Turn is over, advance player
         self.agent_selection = self._agent_selector.next()
-        self.legal_action_mask = {agent: calculate_legal_action_mask(board.get_board(), player=self.agent_selection) for agent in self.agents}
+        self.legal_action_mask = {a: calculate_legal_action_mask(board.get_board(), player=a) for a in self.agents}
         
+        # Check if the new player is blocked (has pieces but no legal moves)
+        if np.sum(self.legal_action_mask[self.agent_selection]) == 0:
+            self.rewards[self.agent_selection] = -1
+            other_agent = "red" if self.agent_selection == "black" else "black"
+            self.rewards[other_agent] = 1
+            self.terminations = {a: True for a in self.possible_agents}
+            self.legal_action_mask = {a: np.zeros((8, 6, 6), dtype=np.int8) for a in self.agents}
+
+        self._accumulate_rewards()
         return 
 
     def render(self):
@@ -240,13 +261,13 @@ class CheckersEnv(AECEnv):
         '''
         return {
             "observations": self.board.get_board(),
-            "legal_action_mask": self.legal_action_mask[agent],
+            "action_mask": self.legal_action_mask[agent],
         }
 
     def observation_space(self, agent):
         return Dict({
             "observations": MultiBinary([4, 6, 6]),
-            "legal_action_mask": MultiBinary([8, 6, 6]) # Updated to 8 Channels
+            "action_mask": MultiBinary([8, 6, 6]),
         })
 
     def action_space(self, agent):
