@@ -12,6 +12,11 @@ moves = [
     (6, Direction.FL), # Red captures black
     (17, Direction.FR), # Black moves out of the way
     (13, Direction.FL), # Red gets promoted to king
+    (14, Direction.FL), 
+    (17, Direction.BL), # Move red king back.
+    (11, Direction.FR), 
+    (14, Direction.BR), 
+    (8, Direction.FL), # Black captures and gets promoted
 ]
 
 for move in moves:

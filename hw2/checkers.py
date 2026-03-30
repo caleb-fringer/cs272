@@ -138,7 +138,16 @@ class CheckersEnv(AECEnv):
         # Handle capture by moving an additional square in that direction
         if is_capture:
             board.move(destination, tuple(direction_vec)) 
+            # Update destination so that the pawn promotion check is correct
+            destination_vec += direction_vec
+            destination = tuple(destination_vec)
         
+        # Handle pawn promotion
+        dest_row = destination[0]
+        should_promote = dest_row == 5 if agent == "red" else dest_row == 0
+        if should_promote:
+            board[destination] = np.array([0,0,0,1]) if agent == "red" else np.array([0,0,1,0])
+
         # TODO: Add check to see if the current player must move again (via
         # capture), or if we can move to the next player.
         self.current_agent = self._agent_selector.next()
