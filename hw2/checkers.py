@@ -130,7 +130,12 @@ class CheckersEnv(AECEnv):
         self.current_agent = self._agent_selector.next()
         self.board = Board()
         self.legal_action_mask = calculate_legal_action_mask(self.board.get_board())
-        return self.get_observations()
+        self.rewards = {agent: 0 for agent in self.possible_agents}
+        self._cumulative_rewards = {agent: 0 for agent in self.possible_agents}
+        self.terminations = {agent: False for agent in self.possible_agents}
+        self.truncations = {agent: False for agent in self.possible_agents}
+        self.infos = {agent: {} for agent in self.possible_agents}
+        self.observations = {agent: None for agent in self.possible_agents}
 
     def step(self, action):
         agent = self.current_agent
@@ -140,11 +145,6 @@ class CheckersEnv(AECEnv):
 
         # Convert pos ({pos|0<=pos<18}) to 6x6 board coords
         src_coords = pos_to_coord(pos)
-
-        # Ensure dictionaries exist (if not initialized in reset)
-        if not hasattr(self, "terminations"):
-            self.terminations = {a: False for a in self.possible_agents}
-            self.rewards = {a: 0 for a in self.possible_agents}
 
         # 1. ILLEGAL ACTION PENALTY
         if self.legal_action_mask[action_channel, src_coords[0], src_coords[1]] == 0:
