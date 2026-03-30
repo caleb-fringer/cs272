@@ -119,26 +119,28 @@ class CheckersEnv(AECEnv):
         self.possible_agents = ["black", "red"]
         self.timestep = None
         self._agent_selector = None
-        self.current_agent = None
+        self.agent_selection = None
         self.board = None
         self.legal_action_mask = None
         self.observations = {}
 
     def reset(self, seed=None, options=None):
         self.timestep = 0
-        self._agent_selector = AgentSelector(self.possible_agents)
-        self.current_agent = self._agent_selector.next()
+        self.agents = self.possible_agents[:]
+        self._agent_selector = AgentSelector(self.agents)
+        self.agent_selection = self._agent_selector.next()
         self.board = Board()
-        self.legal_action_mask = calculate_legal_action_mask(self.board.get_board())
-        self.rewards = {agent: 0 for agent in self.possible_agents}
-        self._cumulative_rewards = {agent: 0 for agent in self.possible_agents}
-        self.terminations = {agent: False for agent in self.possible_agents}
-        self.truncations = {agent: False for agent in self.possible_agents}
-        self.infos = {agent: {} for agent in self.possible_agents}
-        self.observations = {agent: None for agent in self.possible_agents}
+        self.legal_action_mask = {agent: calculate_legal_action_mask(self.board.get_board()) for agent in self.agents}
+        self.rewards = {agent: 0 for agent in self.agents}
+        self._cumulative_rewards = {agent: 0 for agent in self.agents}
+        self.terminations = {agent: False for agent in self.agents}
+        self.truncations = {agent: False for agent in self.agents}
+        self.infos = {agent: {} for agent in self.agents}
+        self.observations = {agent: None for agent in self.agents}
 
     def step(self, action):
-        agent = self.current_agent
+        self.timestep += 1
+        agent = self.agent_selection
         board = self.board
         pos, action_type, direction = action 
         action_channel = action_type * 4 + direction
@@ -147,12 +149,12 @@ class CheckersEnv(AECEnv):
         src_coords = pos_to_coord(pos)
 
         # 1. ILLEGAL ACTION PENALTY
-        if self.legal_action_mask[action_channel, src_coords[0], src_coords[1]] == 0:
+        if self.legal_action_mask[agent][action_channel, src_coords[0], src_coords[1]] == 0:
             self.rewards[agent] = -1
             other_agent = "red" if agent == "black" else "black"
             self.rewards[other_agent] = 0
             self.terminations = {a: True for a in self.possible_agents}
-            return self.get_observations()
+            return
 
         # 2. PERFORM LEGAL MOVE
         is_capture = action_type == 1
@@ -207,8 +209,8 @@ class CheckersEnv(AECEnv):
         if game_over:
             self.terminations = {a: True for a in self.possible_agents}
             # Mask is empty on game over
-            self.legal_action_mask = np.zeros((8, 6, 6), dtype=np.int8)
-            return self.get_observations()
+            self.legal_action_mask = {agent: np.zeros((8, 6, 6), dtype=np.int8) for agent in self.agents}
+            return 
 
         # 5. HANDLE MULTI-JUMPS & TURN PROGRESSION
         # Standard Checkers Rules: A turn does not end if a piece can jump again, 
@@ -219,26 +221,26 @@ class CheckersEnv(AECEnv):
             
             if np.any(new_mask[4:8]):
                 # Captures are available! Update mask, DO NOT switch agent
-                self.legal_action_mask = new_mask
-                return self.get_observations()
+                self.legal_action_mask[agent] = new_mask
+                return 
 
         # If we reach here, the turn is over
-        self.current_agent = self._agent_selector.next()
-        self.legal_action_mask = calculate_legal_action_mask(board.get_board(), player=self.current_agent)
+        self.agent_selection = self._agent_selector.next()
+        self.legal_action_mask = {agent: calculate_legal_action_mask(board.get_board(), player=self.agent_selection) for agent in self.agents}
         
-        return self.get_observations()
+        return 
 
     def render(self):
         self.board.render() 
 
-    def get_observations(self):
+    def observe(self, agent):
         '''
         Get current set of observations & corresponding legal_action_mask.
         The mask is calculated in step() or reset() to accommodate mid-turn multi-jumps.
         '''
         return {
             "observations": self.board.get_board(),
-            "legal_action_mask": self.legal_action_mask,
+            "legal_action_mask": self.legal_action_mask[agent],
         }
 
     def observation_space(self, agent):
