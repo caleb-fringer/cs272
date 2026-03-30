@@ -49,10 +49,9 @@ class Board():
 
     def get_board(self):
         '''
-        Return an immutable copy of the board.
+        Return copy of the board.
         '''
         result = self._board.copy()
-        result.flags.writeable = False
         return result
     
     def render(self):
