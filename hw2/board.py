@@ -5,7 +5,7 @@ class Board():
         pawn_row = np.array([[0,1]*3], dtype=np.int8)
 
         black_pawns = np.concat([
-            np.zeros((4,6), dtype=np.bool),
+            np.zeros((4,6), dtype=np.int8),
             pawn_row, 
             np.roll(pawn_row,1)
         ], dtype=np.int8)
