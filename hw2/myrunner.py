@@ -20,6 +20,7 @@ gamma = 0.99
 num_episodes = 1000
 
 # --- Train ---
+cumulative_rewards = {agent: 0 for agent in env.possible_agents}
 for episode in range(num_episodes):
     env.reset()
     
@@ -35,6 +36,8 @@ for episode in range(num_episodes):
     for agent in env.agent_iter():
         observation, reward, termination, truncation, info = env.last()
         is_terminal = termination or truncation
+
+        cumulative_rewards[agent] += reward
         
         # Convert observation_space representation to tensors for the 
         # ActorCritic model
@@ -119,20 +122,21 @@ for episode in range(num_episodes):
 
 torch.save(model.state_dict(), f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-checkers-agent.pth")
 
-# Run test game, save output to file
-env.reset()
-
-# Disable gradients
-model.eval()
 
 # Redirect stdout
 with open(f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log", "w") as f:
+    # Run test game, saving output to file
+    env.reset()
+    # Disable gradients
+    model.eval()
     sys.stdout = f
     t=0
     for agent in env.agent_iter():
         t += 1
         observation, reward, termination, truncation, info = env.last()
         is_terminal = termination or truncation
+
+        cumulative_rewards[agent] += reward
 
         if is_terminal:
             rewards = env.rewards
@@ -161,4 +165,4 @@ with open(f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log", "w") as
 
         env.step(action)
         env.render()
-
+    print(f"Cumulative rewards: {cumulative_rewards}")
