@@ -1,16 +1,118 @@
-from checkers import ActionType, Direction, CheckersEnv
+import torch
+import torch.optim as optim
+import torch.nn.functional as F
+import numpy as np
+from myagent import ActorCritic, flatten_mask, decode_action
+from mycheckersenv import CheckersEnv
+
+# --- Setup ---
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# Initialize the model and hyperparameters
+model = ActorCritic().to(device)
+optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 env = CheckersEnv()
-env.reset()
+gamma = 0.99
+num_episodes = 1000
 
-for agent in env.agent_iter():
-    observation, reward, termination, truncation, info = env.last()
+# --- Train ---
+for episode in range(num_episodes):
+    env.reset()
+    
+    # Initialize I = 1 for both agents
+    I_factor = {agent: 1.0 for agent in env.possible_agents}
+    
+    # Storage for the previous step (S and A) to compute TD error
+    prev_states = {}
+    prev_masks = {}
+    prev_actions = {}
+    prev_I = {}
+    
+    for agent in env.agent_iter():
+        observation, reward, termination, truncation, info = env.last()
+        is_terminal = termination or truncation
+        
+        # Convert observation_space representation to tensors for the 
+        # ActorCritic model
+        if not is_terminal:
+            obs_array = observation["observations"]
+            obs_tensor = torch.FloatTensor(obs_array).unsqueeze(0).to(device)
+            
+            mask_8x6x6 = observation["action_mask"]
+            flat_mask = flatten_mask(mask_8x6x6)
+            mask_tensor = torch.FloatTensor(flat_mask).unsqueeze(0).to(device)
+        else:
+            obs_tensor, mask_tensor = None, None
 
-    if termination or truncation:
-        action = None
-    else:
-        # this is where you would insert your policy
-        action = env.action_space(agent).sample()
+        # --- Learning Updates ---
+        # If the agent has taken an action previously, we can perform gradient
+        # updates
+        if agent in prev_states:
+            p_state = prev_states[agent]
+            p_mask = prev_masks[agent]
+            p_action = prev_actions[agent]
+            p_I = prev_I[agent]
+            
+            # Estimate v(S')
+            if is_terminal:
+                next_v = torch.tensor([0.0], device=device) # if S' is terminal, v(S') = 0
+            else:
+                # We don't want to calculate the gradient of v(S') until the next step
+                # S = the current observation's state.
+                with torch.no_grad():
+                    _, next_v = model(obs_tensor, mask=mask_tensor)
+                    next_v = next_v.squeeze()
+            
+            # Now that S' is known for S = p_state, we can compute the 
+            # gradients of v(S) and the logits of the policy pi(A|S)
+            dist, value = model(p_state, mask=p_mask)
+            value = value.squeeze()
+            log_prob = dist.log_prob(p_action)
+            
+            # Calculate TD error for actor_loss. Actor doesn't depend on the
+            # weights w of the value function (critic), so detach gradients for
+            # this calculation
+            delta = reward + gamma * next_v - value.detach()
+            
+            # Calculate critic update step
+            # Equivalent to minimizing MSE between value and (reward + gamma * next_v)
+            critic_loss = F.mse_loss(value, torch.tensor(reward + gamma * next_v, dtype=torch.float32, device=device))
+            
+            # Calculate the actor update step
+            # PyTorch optimizers minimize, so we negate the loss to perform gradient ascent
+            actor_loss = - (p_I * delta * log_prob)
+            
+            loss = actor_loss + 0.5 * critic_loss
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-    env.step(action)
-env.close()
+        # --- Take action ---
+        if is_terminal:
+            env.step(None)
+        else:
+            # Sample A from the policy (non-deterministic)
+            with torch.no_grad():
+                dist, _ = model(obs_tensor, mask=mask_tensor)
+                action = dist.sample()
+            
+            # Store data for the next turn's update
+            prev_states[agent] = obs_tensor
+            prev_masks[agent] = mask_tensor
+            prev_actions[agent] = action
+            prev_I[agent] = I_factor[agent]
+            
+            # Decay I
+            I_factor[agent] *= gamma
+            
+            # Take action A
+            env_action = decode_action(action.item())
+            env.step(env_action)
+            
+    if episode % 10 == 0:
+        print(f"Episode {episode} completed.")
+
+torch.save(model.state_dict(), "checkers_agent.pth")
