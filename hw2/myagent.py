@@ -8,9 +8,9 @@ class ActorCritic(nn.Module):
         super().__init__()
         # Backbone: Input is (4, 6, 6) (Masked action tensor)
         self.backbone = nn.Sequential(
-            nn.Conv2d(4, 32, kernel_size=3, padding=1),
+            nn.Conv2d(4, 32, kernel_size=3, padding="same"),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.Conv2d(32, 64, kernel_size=5, padding="same"),
             nn.ReLU(),
             nn.Flatten()
         )
