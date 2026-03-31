@@ -1,9 +1,11 @@
+import sys
+from datetime import datetime
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
 from myagent import ActorCritic, flatten_mask, decode_action
-from mycheckersenv import CheckersEnv
+from mycheckersenv import CheckersEnv, pos_to_coord, ActionType, Direction
 
 # --- Setup ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -15,7 +17,8 @@ optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 env = CheckersEnv()
 gamma = 0.99
-num_episodes = 1000
+#num_episodes = 1000
+num_episodes = 1
 
 # --- Train ---
 for episode in range(num_episodes):
@@ -115,4 +118,48 @@ for episode in range(num_episodes):
     if episode % 10 == 0:
         print(f"Episode {episode} completed.")
 
-torch.save(model.state_dict(), "checkers_agent.pth")
+torch.save(model.state_dict(), f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-checkers-agent.pth")
+
+# Run test game, save output to file
+env.reset()
+
+# Disable gradients
+model.eval()
+
+# Redirect stdout
+with open(f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log", "w") as f:
+    sys.stdout = f
+    t=0
+    for agent in env.agent_iter():
+        t += 1
+        observation, reward, termination, truncation, info = env.last()
+        is_terminal = termination or truncation
+
+        if is_terminal:
+            rewards = env.rewards
+            if rewards["black"] == rewards["red"]:
+                print("Game ended in a tie!")
+            else:
+                winner = max(rewards, key=lambda player: rewards[player])
+                print(f"Winner: {winner}!")
+            env.step(None)
+            break
+
+        obs_array = observation["observations"]
+        obs_tensor = torch.FloatTensor(obs_array).unsqueeze(0).to(device)
+        
+        mask_8x6x6 = env.legal_action_mask[agent]
+        flat_mask = flatten_mask(mask_8x6x6)
+        mask_tensor = torch.FloatTensor(flat_mask).unsqueeze(0).to(device)
+
+        dist, _ = model(obs_tensor, mask=mask_tensor)
+        action_idx = dist.sample() 
+
+        action = decode_action(action_idx.item())
+        pos, action_type, dir = action
+        coords = pos_to_coord(pos)
+        print(f"Timestep {t}, {agent} takes action {coords, ActionType(action_type), Direction(dir)}")
+
+        env.step(action)
+        env.render()
+
