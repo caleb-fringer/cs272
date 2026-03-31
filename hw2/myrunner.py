@@ -63,12 +63,12 @@ for episode in range(num_episodes):
                 # S = the current observation's state.
                 with torch.no_grad():
                     _, next_v = model(obs_tensor, mask=mask_tensor)
-                    next_v = next_v.squeeze()
+                    next_v = next_v.squeeze(0)
             
             # Now that S' is known for S = p_state, we can compute the 
             # gradients of v(S) and the logits of the policy pi(A|S)
             dist, value = model(p_state, mask=p_mask)
-            value = value.squeeze()
+            value = value.squeeze(0)
             log_prob = dist.log_prob(p_action)
             
             # Calculate TD error for actor_loss. Actor doesn't depend on the
@@ -78,7 +78,7 @@ for episode in range(num_episodes):
             
             # Calculate critic update step
             # Equivalent to minimizing MSE between value and (reward + gamma * next_v)
-            critic_loss = F.mse_loss(value, torch.tensor(reward + gamma * next_v, dtype=torch.float32, device=device))
+            critic_loss = F.mse_loss(value, reward + gamma * next_v)
             
             # Calculate the actor update step
             # PyTorch optimizers minimize, so we negate the loss to perform gradient ascent
