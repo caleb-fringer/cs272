@@ -17,8 +17,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 env = CheckersEnv()
 gamma = 0.99
-#num_episodes = 1000
-num_episodes = 1
+num_episodes = 1000
 
 # --- Train ---
 for episode in range(num_episodes):
