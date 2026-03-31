@@ -120,11 +120,14 @@ for episode in range(num_episodes):
     if episode % 10 == 0:
         print(f"Episode {episode} completed.")
 
-torch.save(model.state_dict(), f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-checkers-agent.pth")
+model_path = f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-checkers-agent.pth"
+torch.save(model.state_dict(), model_path)
+print("Model saved to " + model_path)
 
 
 # Redirect stdout
-with open(f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log", "w") as f:
+filepath = f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log"
+with open(filepath, "w") as f:
     # Run test game, saving output to file
     env.reset()
     # Disable gradients
@@ -166,3 +169,6 @@ with open(f"{datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")}-game.log", "w") as
         env.step(action)
         env.render()
     print(f"Cumulative rewards: {cumulative_rewards}")
+
+sys.stdout = sys.__stdout__
+print(f"Test game log saved to " + filepath)
